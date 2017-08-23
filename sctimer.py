@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
 import time
+import curses 
+
+#Initializing the curses module.
+stdscr=curses.initscr()
+curses.noecho()
+curses.cbreak()
+stdscr.nodelay(1)
 
 solves = []
-i=0.00
-x=1
 
 def countdown():
     for num in range(15, 0, -1):
@@ -22,15 +27,27 @@ def time_format(time):
 
 def stopwatch(t):
     try:
-        while x!=0:
+        while 1:
             print(time_format(t), end="\r")
             time.sleep(0.01)
             t+=0.01
     except KeyboardInterrupt:
         return t
-
-countdown()
-print (solves)
-solves.append(time_format(stopwatch(i)))
-print (solves)
-
+    
+def main():
+    while 1:
+        key=stdscr.getch()
+        if key==ord(' '):   #The solve count starts after pressing SPACEBAR
+            countdown()
+            solves.append(time_format(stopwatch(0.00)))
+            print ("\rYour solves for this session: {0}".format(solves), end="\n\r")
+        elif key==27:       #The application exits after pressing ESCAPE
+            break
+            
+if __name__=="__main__":
+    main()
+    
+#Terminating properly the application by reversing the curses settings.    
+curses.echo()
+curses.nocbreak()
+curses.endwin()
