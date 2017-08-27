@@ -4,6 +4,11 @@ import datetime
 import curses 
 import os
 import argparse
+from configparser import SafeConfigParser
+from collections import namedtuple
+
+SCT_CONF_PATH=os.path.dirname(os.path.abspath(__file__))
+SCT_CONF_FILE=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sctimer.conf')
 
 #Initializing the curses module.
 stdscr=curses.initscr()
@@ -13,16 +18,51 @@ stdscr.nodelay(1)
 
 sct_parser=argparse.ArgumentParser(description='''
             **A terminal based timer for SpeedCubing***
-            ''')
+            \n\r''')
 sct_parser.add_argument('--countdown', action='store_true',
-                help='Disable the countdown function.')
-sct_parser.add_argument('-f', dest='filename',
+                help='Disable the countdown function.\n\r')
+sct_parser.add_argument('-f', action='store', dest='filename',
                 default=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'times.txt'),
                 help='Specify file where your solve times will be exported.')
+sct_parser.add_argument('--stats', action='store_true',
+                help='Return solve time stats.')
+sct_parser.add_argument('--config', action='store', dest='cfgfile',
+                help='Run SpeedCubingTimer using a different configuration file.')
 
 sct_options = sct_parser.parse_args()
 
 solves = []
+
+def config():
+    conf_parser=SafeConfigParser()
+    if sct_options.cfgfile:
+        if os.path.isfile(sct_options.cfgfile):
+            conf_file=sct_options.cfgfile
+        else:
+            conf_file=SCT_CONF_FILE
+            print('Configuration file {} not found. Using default conf file{}.\n'.format(sct_options.cfgfile, SCT_CONF_FILE))
+    else:
+        conf_file=SCT_CONF_FILE
+    try:
+        conf_parser.read(conf_file)
+        try:
+            countdown=conf_parser.getboolean('Countdown', 'Countdown_on')
+        except ConfigParser.NoOptionError:
+            countdown=True
+        try:
+            export=conf_parser.getboolean('Exporting', 'Export_always')
+        except ConfigParser.NoOptionError:
+            export=True
+        try:
+            filename=conf_parser.get('Exporting', 'Export_file')
+        except ConfingParser.NoOptionError:
+            filename='times.txt'
+    except (ConfigParser.NoSectionError,
+            ConfigParser.MissingSectionHeaderError):
+        print('File {} contains no section headers.'.format(conf_file))
+    Configuration=namedtuple('Config', 'countdown export filename')
+    config=Configuration(countdown=countdown, export=export, filename=filename)
+    return config
 
 def countdown():
     try:
@@ -73,18 +113,20 @@ def termination_handler():
     raise SystemExit
 
 def main():
+    export_file=sct_options.filename if sct_options.filename else config().filename
     while 1:
         try:
             key=stdscr.getch()
             if key==ord(' '):   #The solve count starts after pressing SPACEBAR
                 if not sct_options.countdown:
-                    countdown()
+                    if config().countdown: 
+                        countdown()
                 solves.append(time_format(stopwatch(0.00)))
                 print ("\rYour solves for this session: {0}".format(solves), end="\n\r")
             elif key==27:       #The application exits after pressing ESCAPE
-                if len(solves)>0:
-                    export_times(sct_options.filename, solves)
-                termination_handler()
+               if config().export and len(solves)>0:
+                    export_times(export_file, solves)
+                    termination_handler()
         except KeyboardInterrupt:
             termination_handler()
     
