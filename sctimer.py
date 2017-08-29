@@ -6,7 +6,7 @@ import os
 import argparse
 from configparser import SafeConfigParser
 from collections import namedtuple
-import string
+
 SCT_CONF_PATH=os.path.dirname(os.path.abspath(__file__))
 SCT_CONF_FILE=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sctimer.conf')
 
@@ -101,39 +101,22 @@ def stopwatch(t):
     except KeyboardInterrupt:
         termination_handler()
 
-def avg_x(solves_num, filepath):
-    BLKSIZE=4096
-    buff=''
-    if not filepath.seekable():
-        return
+def statistics(solves_count, filepath):
     with open(filepath, 'r') as times_file:
-        times_file.seek(0, 2)
-        lastchar=times_file.read(1)
-        trailing_newline=(lastchar=='\n')
-        while 1:
-            newline_pos=buf.find('\n')
-            pos=times_file.tell()
-            if newline_pos!=-1:
-                # Found a newline
-                line = buf[newline_pos+1:]
-                buf = buf[:newline_pos]
-                if pos or newline_pos or trailing_newline:
-                    line+='\n'
-                yield line
-            elif pos:
-                # Need to fill buffer
-                toread=min(BLKSIZE, pos)
-                times_file.seek(-toread, 0)
-                buf+=times_file.read(toread)
-                times_file.seek(-toread, 0)
-                if pos==toread:
-                    buf='\n'+buf
+        stats_list=[]
+        for count, line in list(enumerate(times_file)):
+            if solves_count>0:
+                stats_list.append(line.strip('[]\n ').split(', '))
+                solves_count-=1
             else:
-                return
+                break
+    return stats_list
 
 def export_times(filepath, current_solves):
-    with open(filepath, 'w' if not os.path.isfile(filepath) else 'a') as times_file:
-        times_file.write(str(datetime.datetime.now().date())+': '+str(current_solves)+'\n')
+    with open(filepath, 'w+' if not os.path.isfile(filepath) else 'r+') as times_file:
+        previous_times=times_file.read()
+        times_file.seek(0, 0)
+        times_file.write(str(datetime.datetime.now().date())+': '+str(current_solves)+'\n'+previous_times)
 
 #Terminating properly the application by reversing the 'curses' settings
 def termination_handler():
@@ -145,8 +128,7 @@ def termination_handler():
 def main():
     export_file=sct_options.filename if sct_options.filename else config().filename
     if sct_options.stats:
-        for line in avg_x(5, export_file):
-            print(eval(line))
+        print('Your last 5 sessions are: {}'.format(statistics(5, export_file)))
         termination_handler()
     else:
         while 1:
@@ -160,7 +142,7 @@ def main():
                 elif key==27:       #The application exits after pressing ESCAPE
                     if config().export and len(solves)>0:
                         export_times(export_file, solves)
-                        termination_handler()
+                    termination_handler()
             except KeyboardInterrupt:
                 termination_handler()
     
