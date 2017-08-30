@@ -119,6 +119,13 @@ def statistics(solves_count, filepath):
                     break
     return stats_list
 
+def avg_x(solves_count, filepath):
+    if len(statistics(solves_count, filepath))>solves_count:
+        return '--:--'
+    else:
+        avg=sum(float(solve) for solve in statistics(solves_count, filepath))/solves_count
+        return '{:.2f}'.format(avg)
+
 def export_times(filepath, current_solves):
     with open(filepath, 'w+' if not os.path.isfile(filepath) else 'r+') as times_file:
         previous_times=times_file.read()
@@ -135,7 +142,11 @@ def termination_handler():
 def main():
     export_file=sct_options.filename if sct_options.filename else config().filename
     if sct_options.stats:
-        print('Your last 5 solves are: {}'.format(statistics(5, export_file)))
+        print('Your last 5 solves are: {}\n\r'.format(statistics(12, export_file)))
+        print('Your average of the last 3 solves is: {}\n\r'.format(avg_x(3, export_file)))
+        print('Your average of the last 5 solves is: {}\n\r'.format(avg_x(5, export_file)))
+        print('Your average of the last 12 solves is: {}\n\r'.format(avg_x(12, export_file)))
+        print('Your average of the last 100 solves is: {}\n\r'.format(avg_x(100, export_file)))
         termination_handler()
     else:
         while 1:
