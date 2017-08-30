@@ -101,15 +101,22 @@ def stopwatch(t):
     except KeyboardInterrupt:
         termination_handler()
 
+'''Reading and parsing times in order to use them in various operations.
+   The function reads the times_file, splits it into lines and then replaces
+   all quotes and square brackets and appends the words to an empty list.
+   The format in which the words are appended after parsing, makes it easier
+   to use in later operations.
+'''
 def statistics(solves_count, filepath):
     with open(filepath, 'r') as times_file:
         stats_list=[]
-        for count, line in list(enumerate(times_file)):
-            if solves_count>0:
-                stats_list.append(line.strip('[]\n ').split(', '))
-                solves_count-=1
-            else:
-                break
+        for line in times_file.read().splitlines():
+            for word in line.split(':')[-1].split('\','):
+                word=word.replace('\'', '')
+                if len(stats_list)<=solves_count-1:
+                    stats_list.append(word.strip('[ ]'))
+                else:
+                    break
     return stats_list
 
 def export_times(filepath, current_solves):
@@ -128,7 +135,7 @@ def termination_handler():
 def main():
     export_file=sct_options.filename if sct_options.filename else config().filename
     if sct_options.stats:
-        print('Your last 5 sessions are: {}'.format(statistics(5, export_file)))
+        print('Your last 5 solves are: {}'.format(statistics(5, export_file)))
         termination_handler()
     else:
         while 1:
