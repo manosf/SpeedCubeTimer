@@ -10,26 +10,27 @@ from collections import namedtuple
 SCT_CONF_PATH=os.path.dirname(os.path.abspath(__file__))
 SCT_CONF_FILE=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sctimer.conf')
 
-#Initializing the curses module.
+sct_parser=argparse.ArgumentParser(description='''
+            ***A terminal based timer for SpeedCubing***
+           ----------------------------------------------
+            ''')
+sct_parser.add_argument('-c', '--no_countdown', action='store_true',
+                help='Omit the countdown function.')
+sct_parser.add_argument('-f', '--file', action='store', dest='filename',
+                default=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'times.txt'),
+                help='Specify file where your solve times will be exported.')
+sct_parser.add_argument('-s', '--stats', action='store_true',
+                help='Return solve time stats.')
+sct_parser.add_argument('-o', '--config', action='store', dest='cfgfile',
+                help='Run SpeedCubingTimer using a different configuration file.')
+
+sct_options = sct_parser.parse_args()
+
+#Initializing the 'curses' module.
 stdscr=curses.initscr()
 curses.noecho()
 curses.cbreak()
 stdscr.nodelay(1)
-
-sct_parser=argparse.ArgumentParser(description='''
-            **A terminal based timer for SpeedCubing***
-            \n\r''')
-sct_parser.add_argument('--countdown', action='store_true',
-                help='Disable the countdown function.\n\r')
-sct_parser.add_argument('-f', action='store', dest='filename',
-                default=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'times.txt'),
-                help='Specify file where your solve times will be exported.')
-sct_parser.add_argument('--stats', action='store_true',
-                help='Return solve time stats.')
-sct_parser.add_argument('--config', action='store', dest='cfgfile',
-                help='Run SpeedCubingTimer using a different configuration file.')
-
-sct_options = sct_parser.parse_args()
 
 solves = []
 
@@ -108,23 +109,28 @@ def stopwatch(t):
    to use in later operations.
 '''
 def statistics(solves_count, filepath):
-    with open(filepath, 'r') as times_file:
-        stats_list=[]
-        for line in times_file.read().splitlines():
-            for word in line.split(':')[-1].split('\','):
-                word=word.replace('\'', '')
-                if len(stats_list)<=solves_count-1:
-                    stats_list.append(word.strip('[ ]'))
-                else:
-                    break
-    return stats_list
+    try:
+        with open(filepath, 'r') as times_file:
+            stats_list=[]
+            for line in times_file.read().splitlines():
+                for word in line.split(':')[-1].split('\','):
+                    word=word.replace('\'', '')
+                    if len(stats_list)<=solves_count-1:
+                        stats_list.append(word.strip('[ ]'))
+                    else:
+                        break
+        return stats_list
+    except OSError:
+        print('There is no such times\' file. Pass \'-h\' for help.')
+        termination_handler()
 
 def avg_x(solves_count, filepath):
-    if len(statistics(solves_count, filepath))>solves_count:
-        return '--:--'
+    if len(statistics(solves_count, filepath))<solves_count or len(statistics(solves_count, filepath))==0:
+        result='--:--'
     else:
         avg=sum(float(solve) for solve in statistics(solves_count, filepath))/solves_count
-        return '{:.2f}'.format(avg)
+        result='{:.2f}'.format(avg)
+    return result
 
 def export_times(filepath, current_solves):
     with open(filepath, 'w+' if not os.path.isfile(filepath) else 'r+') as times_file:
@@ -143,17 +149,17 @@ def main():
     export_file=sct_options.filename if sct_options.filename else config().filename
     if sct_options.stats:
         print('Your last 5 solves are: {}\n\r'.format(statistics(12, export_file)))
-        print('Your average of the last 3 solves is: {}\n\r'.format(avg_x(3, export_file)))
-        print('Your average of the last 5 solves is: {}\n\r'.format(avg_x(5, export_file)))
-        print('Your average of the last 12 solves is: {}\n\r'.format(avg_x(12, export_file)))
-        print('Your average of the last 100 solves is: {}\n\r'.format(avg_x(100, export_file)))
+        print('Your average of the last 3 solves is: {}\r'.format(avg_x(3, export_file)))
+        print('Your average of the last 5 solves is: {}\r'.format(avg_x(5, export_file)))
+        print('Your average of the last 12 solves is: {}\r'.format(avg_x(12, export_file)))
+        print('Your average of the last 100 solves is: {}\r'.format(avg_x(100, export_file)))
         termination_handler()
     else:
         while 1:
             try:
                 key=stdscr.getch()
                 if key==ord(' '):   #The solve count starts after pressing SPACEBAR
-                    if not sct_options.countdown and config().countdown:
+                    if not sct_options.no_countdown and config().countdown:
                         countdown()
                     solves.append(time_format(stopwatch(0.00)))
                     print ("\rYour solves for this session: {0}".format(solves), end="\n\r")
