@@ -128,8 +128,16 @@ def avg_x(solves_count, filepath):
     if len(statistics(solves_count, filepath))<solves_count or len(statistics(solves_count, filepath))==0:
         result='--:--'
     else:
-        avg=sum(float(solve) for solve in statistics(solves_count, filepath))/solves_count
-        result='{:.2f}'.format(avg)
+        if solves_count==3:
+            avg=sum(float(solve) for solve in statistics(solves_count, filepath))/solves_count
+            result='{:.2f}'.format(avg)
+        else:
+            avg=[] 
+            for solve in statistics(solves_count, filepath):
+                if solve!=max(statistics(solves_count, filepath)) and solve!=min(statistics(solves_count, filepath)):
+                    avg.append(float(solve))
+            avg=(sum(solve for solve in avg))/(solves_count-2)
+            result='{:.2f}'.format(avg)
     return result
 
 def export_times(filepath, current_solves):
