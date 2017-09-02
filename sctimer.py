@@ -4,6 +4,7 @@ import datetime
 import curses 
 import os
 import argparse
+import random
 from configparser import SafeConfigParser
 from collections import namedtuple
 
@@ -64,6 +65,27 @@ def config():
     Configuration=namedtuple('Config', 'countdown export filename')
     config=Configuration(countdown=countdown, export=export, filename=filename)
     return config
+
+def scrambler():
+    try:
+        faces = ['R', 'R\'', 'R2', 'L', 'L\'', 'L2', 'U', 'U\'', 'U2', 
+        'D', 'D\'', 'D2', 'F', 'F\'', 'F2', 'B', 'B\'', 'B2']
+        scramble=''
+        for move in range(10):
+            turn=random.randint(0, len(faces)-1)
+            if move>0:
+                while faces[turn]==previous_turn[0]:
+                    turn=random.randint(0, len(faces)-1)
+            previous_turn=faces[turn]
+            scramble+=' '+faces[turn]
+        print('{}\r'.format(scramble))
+        key=None
+        for i in range(120):
+            if key!=ord(' '):
+                key=stdscr.getch()
+                time.sleep(0.5)
+    except KeyboardInterrupt:
+        termination_handler()
 
 def countdown():
     try:
@@ -157,7 +179,7 @@ def main():
     export_file=sct_options.filename if sct_options.filename else config().filename
     if sct_options.stats:
         print('Your last 5 solves are: {}\n\r'.format(statistics(12, export_file)))
-        print('Your average of the last 3 solves is: {}\r'.format(avg_x(3, export_file)))
+        print('Your mean of the last 3 solves is: {}\r'.format(avg_x(3, export_file)))
         print('Your average of the last 5 solves is: {}\r'.format(avg_x(5, export_file)))
         print('Your average of the last 12 solves is: {}\r'.format(avg_x(12, export_file)))
         print('Your average of the last 100 solves is: {}\r'.format(avg_x(100, export_file)))
@@ -167,6 +189,7 @@ def main():
             try:
                 key=stdscr.getch()
                 if key==ord(' '):   #The solve count starts after pressing SPACEBAR
+                    scrambler()
                     if not sct_options.no_countdown and config().countdown:
                         countdown()
                     solves.append(time_format(stopwatch(0.00)))
