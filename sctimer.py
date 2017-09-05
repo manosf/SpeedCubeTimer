@@ -21,7 +21,9 @@ sct_parser.add_argument('-f', '--file', action='store', dest='filename',
                 default=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'times.txt'),
                 help='Specify file where your solve times will be exported.')
 sct_parser.add_argument('-s', '--stats', action='store_true',
-                help='Return solve time stats.')
+                help='Return solve time statisticss.')
+sct_parser.add_argument('-r', '--scramble', action='store', dest='scramble_length', type=int,
+                help='Reverse the default option for printing scrambles.')
 sct_parser.add_argument('-o', '--config', action='store', dest='cfgfile',
                 help='Run SpeedCubingTimer using a different configuration file.')
 
@@ -42,7 +44,7 @@ def config():
             conf_file=sct_options.cfgfile
         else:
             conf_file=SCT_CONF_FILE
-            print('Configuration file {} not found. Using default conf file{}.\n'.format(sct_options.cfgfile, SCT_CONF_FILE))
+            print('Configuration file {} not found. Using default conf file{}.'.format(sct_options.cfgfile, SCT_CONF_FILE), end='\n')
     else:
         conf_file=SCT_CONF_FILE
     try:
@@ -59,26 +61,35 @@ def config():
             filename=conf_parser.get('Exporting', 'Export_file')
         except ConfingParser.NoOptionError:
             filename='times.txt'
+        try:
+            scramble=conf_parser.getboolean('Scrambles', 'Scramble')
+        except ConfigParser.NoOptionError:
+            scramble=True
+        try:
+            scramble_length=conf_parser.getint('Scrambles', 'Length')
+        except ConfigParser.NoOptionError:
+            scramble_length=10
     except (ConfigParser.NoSectionError,
             ConfigParser.MissingSectionHeaderError):
-        print('File {} contains no section headers.'.format(conf_file))
-    Configuration=namedtuple('Config', 'countdown export filename')
-    config=Configuration(countdown=countdown, export=export, filename=filename)
+        print('File {} contains no section headers.'.format(conf_file), end='\r')
+        termination_handler()
+    Configuration=namedtuple('Config', 'countdown export filename scramble scramble_length')
+    config=Configuration(countdown=countdown, export=export, filename=filename, scramble=scramble, scramble_length=scramble_length)
     return config
 
-def scrambler():
+def scrambler(length):
     try:
         faces = ['R', 'R\'', 'R2', 'L', 'L\'', 'L2', 'U', 'U\'', 'U2', 
         'D', 'D\'', 'D2', 'F', 'F\'', 'F2', 'B', 'B\'', 'B2']
         scramble=''
-        for move in range(10):
+        for move in range(length):
             turn=random.randint(0, len(faces)-1)
             if move>0:
-                while faces[turn]==previous_turn[0]:
+                while faces[turn]==previous_turn:
                     turn=random.randint(0, len(faces)-1)
-            previous_turn=faces[turn]
             scramble+=' '+faces[turn]
-        print('{}\r'.format(scramble))
+            previous_turn=faces[turn]
+        print(scramble, end='\n\r')
         key=None
         for i in range(120):
             if key!=ord(' '):
@@ -90,15 +101,18 @@ def scrambler():
 def countdown():
     try:
         key=None
-        for num in range(15, 0, -1):
+        for num in range(30, 0, -1):
             if key!=ord(' '):
                 key=stdscr.getch()
-                if num !=0:
-                    if num>9:
-                        print ('{0}'.format(num), end="\r")
+                if key==27:
+                    print('Terminated by user, no times were exported for this session', end='\r')
+                    raise KeyboardInterrupt
+                if int(num/2) !=0:
+                    if int(num/2)>9:
+                        print (int(num/2), end="\r")
                     else:
-                        print ('0'+'{0}'.format(num), end="\r")
-                    time.sleep(1)
+                        print ('0'+'{}'.format(int(num/2)), end="\r")
+                    time.sleep(0.5)
                 else:
                     key=ord(' ')
             else:
@@ -117,6 +131,8 @@ def stopwatch(t):
         key=None
         while key!=ord(' '):
             key=stdscr.getch()
+            if key==27:
+                termination_handler()
             print(time_format(t), end="\r")
             time.sleep(0.01)
             t+=0.01
@@ -152,14 +168,14 @@ def avg_x(solves_count, filepath):
     else:
         if solves_count==3:
             avg=sum(float(solve) for solve in statistics(solves_count, filepath))/solves_count
-            result='{:.2f}'.format(avg)
+            result=time_format(avg)
         else:
             avg=[] 
             for solve in statistics(solves_count, filepath):
                 if solve!=max(statistics(solves_count, filepath)) and solve!=min(statistics(solves_count, filepath)):
                     avg.append(float(solve))
             avg=(sum(solve for solve in avg))/(solves_count-2)
-            result='{:.2f}'.format(avg)
+            result=time_format(avg)
     return result
 
 def export_times(filepath, current_solves):
@@ -178,23 +194,27 @@ def termination_handler():
 def main():
     export_file=sct_options.filename if sct_options.filename else config().filename
     if sct_options.stats:
-        print('Your last 5 solves are: {}\n\r'.format(statistics(12, export_file)))
-        print('Your mean of the last 3 solves is: {}\r'.format(avg_x(3, export_file)))
-        print('Your average of the last 5 solves is: {}\r'.format(avg_x(5, export_file)))
-        print('Your average of the last 12 solves is: {}\r'.format(avg_x(12, export_file)))
-        print('Your average of the last 100 solves is: {}\r'.format(avg_x(100, export_file)))
+        print('Your last 5 solves are: {}'.format(statistics(12, export_file)), end='\n\r')
+        print('Your mean of the last 3 solves is: {}'.format(avg_x(3, export_file)), end='\n\r')
+        print('Your average of the last 5 solves is: {}'.format(avg_x(5, export_file)), end='\n\r')
+        print('Your average of the last 12 solves is: {}'.format(avg_x(12, export_file)), end='\n\r')
+        print('Your average of the last 100 solves is: {}'.format(avg_x(100, export_file)), end ='\n\r')
         termination_handler()
     else:
         while 1:
             try:
                 key=stdscr.getch()
-                if key==ord(' '):   #The solve count starts after pressing SPACEBAR
-                    scrambler()
-                    if not sct_options.no_countdown and config().countdown:
+                if key==ord(' '):                                               #The solve count starts after pressing SPACEBAR
+                    if not sct_options.scramble_length:                         #Check whether or not a scramble will be displayed and what its length will be
+                        if config().scramble:
+                            scrambler(config().scramble_length)
+                    else:
+                        scrambler(sct_options.scramble_length)
+                    if not sct_options.no_countdown and config().countdown:     #Check whether or not the countdown will be displayed
                         countdown()
                     solves.append(time_format(stopwatch(0.00)))
-                    print ("\rYour solves for this session: {0}".format(solves), end="\n\r")
-                elif key==27:       #The application exits after pressing ESCAPE
+                    print ('Your solves for this session: {}'.format(solves), end='\n\r')
+                elif key==27:                                                   #The application exits after pressing ESCAPE
                     if config().export and len(solves)>0:
                         export_times(export_file, solves)
                     termination_handler()
