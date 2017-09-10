@@ -79,15 +79,16 @@ def config():
 
 def scrambler(length):
     try:
-        faces = ['R', 'R\'', 'R2', 'L', 'L\'', 'L2', 'U', 'U\'', 'U2', 
-        'D', 'D\'', 'D2', 'F', 'F\'', 'F2', 'B', 'B\'', 'B2']
+        faces = ['R', 'R\'', 'L', 'L\'', 'U', 'U\'', 'D', 'D\'', 'F', 
+                'F\'', 'B', 'B\'', 'R2', 'L2', 'U2', 'D2', 'F2', 'B2']
         scramble=''
         for move in range(length):
             turn=random.randint(0, len(faces)-1)
             if move>0:
-                while faces[turn]==previous_turn:
+                while faces[turn]==previous_turn or int(turn/2)==int(previous_num/2):
                     turn=random.randint(0, len(faces)-1)
             scramble+=' '+faces[turn]
+            previous_num=turn
             previous_turn=faces[turn]
         print(scramble, end='\n\r')
         key=None
