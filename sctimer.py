@@ -133,7 +133,8 @@ def stopwatch(t):
         while key!=ord(' '):
             key=stdscr.getch()
             if key==27:
-                termination_handler()
+                t='DNF'
+                break
             print(time_format(t), end="\r")
             time.sleep(0.01)
             t+=0.01
@@ -168,13 +169,19 @@ def avg_x(solves_count, filepath):
         result='--:--'
     else:
         if solves_count==3:
-            avg=sum(float(solve) for solve in statistics(solves_count, filepath))/solves_count
-            result=time_format(avg)
+            try:
+                avg=sum(float(solve) for solve in statistics(solves_count, filepath))/solves_count
+                result=time_format(avg)
+            except ValueError:
+                result='DNF'
         else:
             avg=[] 
             for solve in statistics(solves_count, filepath):
-                if solve!=max(statistics(solves_count, filepath)) and solve!=min(statistics(solves_count, filepath)):
-                    avg.append(float(solve))
+                try:
+                    if solve!=max(statistics(solves_count, filepath)) and solve!=min(statistics(solves_count, filepath)):
+                        avg.append(float(solve))
+                except ValueError:
+                    avg.append(max(statistics(solves_count, filepath)))
             avg=(sum(solve for solve in avg))/(solves_count-2)
             result=time_format(avg)
     return result
@@ -213,7 +220,10 @@ def main():
                         scrambler(sct_options.scramble_length)
                     if not sct_options.no_countdown and config().countdown:     #Check whether or not the countdown will be displayed
                         countdown()
-                    solves.append(time_format(stopwatch(0.00)))
+                    if stopwatch(0.00)!='DNF':
+                        solves.append(time_format(stopwatch(0.00)))
+                    else:
+                        solves.append(stopwatch(0.00))
                     print ('Your solves for this session: {}'.format(solves), end='\n\r')
                 elif key==27:                                                   #The application exits after pressing ESCAPE
                     if config().export and len(solves)>0:
