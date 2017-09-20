@@ -23,7 +23,7 @@ sct_parser.add_argument('-f', '--file', action='store', dest='filename',
 sct_parser.add_argument('-s', '--stats', action='store_true',
                 help='Return solve time statisticss.')
 sct_parser.add_argument('-r', '--scramble', action='store', dest='scramble_length', type=int,
-                help='Reverse the default option for printing scrambles.')
+                help='Specify the length of scrambles for the session.')
 sct_parser.add_argument('-o', '--config', action='store', dest='cfgfile',
                 help='Run SpeedCubingTimer using a different configuration file.')
 
