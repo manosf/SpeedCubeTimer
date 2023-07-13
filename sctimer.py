@@ -8,6 +8,8 @@ import random
 from configparser import SafeConfigParser
 from collections import namedtuple
 
+print("Hey SC")
+
 SCT_CONF_PATH=os.path.dirname(os.path.abspath(__file__))
 SCT_CONF_FILE=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sctimer.conf')
 
